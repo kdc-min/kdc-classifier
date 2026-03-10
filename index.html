@@ -196,7 +196,7 @@ body.shake { animation: shake 0.4s ease; }
 /* ===================== GAME SCREEN ===================== */
 #game-screen {
   display: none;
-  height: 100vh;
+  min-height: 100vh;
   flex-direction: column;
 }
 
@@ -224,7 +224,7 @@ body.shake { animation: shake 0.4s ease; }
   display: grid;
   grid-template-columns: 300px 1fr;
   flex: 1;
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* Book panel */
@@ -235,7 +235,7 @@ body.shake { animation: shake 0.4s ease; }
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  overflow-y: auto;
+  overflow-y: visible;
 }
 
 .book-cover {
@@ -375,6 +375,7 @@ body.shake { animation: shake 0.4s ease; }
   gap: 0.6rem;
   align-items: flex-start;
   line-height: 1.4;
+  min-height: 44px;
 }
 
 .kdc-btn:hover {
@@ -467,11 +468,13 @@ body.shake { animation: shake 0.4s ease; }
   border: 1px solid var(--green);
   color: var(--green);
   font-family: var(--mono);
-  font-size: 0.9rem;
-  letter-spacing: 0.15em;
-  padding: 0.6rem 1.5rem;
+  font-size: 1rem;
+  letter-spacing: 0.2em;
+  padding: 1rem;
   cursor: pointer;
-  align-self: flex-end;
+  width: 100%;
+  margin-top: auto;
+  min-height: 52px;
   transition: all 0.15s;
 }
 
@@ -524,20 +527,38 @@ body.shake { animation: shake 0.4s ease; }
 }
 
 /* ===================== RESPONSIVE ===================== */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
+  #game-screen {
+    min-height: 100dvh;
+    height: auto;
+  }
+
+  .hud {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
   .game-body {
     grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto auto;
+    overflow: visible;
   }
 
   .book-panel {
     border-right: none;
     border-bottom: 1px solid var(--border);
-    max-height: 50vh;
+    max-height: none;
+    overflow-y: visible;
   }
 
-  .book-cover { aspect-ratio: 3/1; }
-  .book-cover-title { font-size: 0.8rem; }
+  .book-cover {
+    aspect-ratio: 4/3;
+  }
+
+  .classify-panel {
+    overflow-y: visible;
+  }
 }
 
 .kdc-btn.disabled-wrong {
@@ -592,7 +613,7 @@ body.shake { animation: shake 0.4s ease; }
   display: flex;
   align-items: flex-end;
   gap: 4px;
-  height: 80px;
+  height: 140px;
 }
 
 .bar-chart .bar {
@@ -657,18 +678,18 @@ body.shake { animation: shake 0.4s ease; }
   </div>
 
   <div class="setup-box">
-    <h2>// GAME CONFIGURATION</h2>
+    <h2>// 게임 설정</h2>
 
     <div>
-      <div class="field-label">// SELECT MODE</div>
+      <div class="field-label">// 모드 선택</div>
       <div class="chip-group" id="mode-chips">
-        <div class="chip active" data-value="practice">연습 모드</div>
-        <div class="chip" data-value="ranking">실전 모드</div>
+        <div class="chip" data-value="practice">연습 모드</div>
+        <div class="chip active" data-value="ranking">실전 모드</div>
       </div>
     </div>
 
-    <div id="domain-chips-wrap">
-      <div class="field-label">// SELECT SUBJECT DOMAIN</div>
+    <div id="domain-chips-wrap" style="display:none">
+      <div class="field-label">// 분야 선택</div>
       <div class="chip-group" id="domain-chips">
         <div class="chip active" data-value="all">ALL</div>
         <div class="chip" data-value="000">000 총류</div>
@@ -684,8 +705,8 @@ body.shake { animation: shake 0.4s ease; }
       </div>
     </div>
 
-    <div id="count-chips-wrap">
-      <div class="field-label">// NUMBER OF QUESTIONS</div>
+    <div id="count-chips-wrap" style="display:none">
+      <div class="field-label">// 문제 수</div>
       <div class="chip-group" id="count-chips">
         <div class="chip" data-value="5">5</div>
         <div class="chip active" data-value="10">10</div>
@@ -694,8 +715,8 @@ body.shake { animation: shake 0.4s ease; }
       </div>
     </div>
 
-    <button class="btn-start" onclick="startGame()">[ START GAME ]</button>
-    <button class="btn-stats" onclick="showStats()">[ 📊 MY STATS ]</button>
+    <button class="btn-start" onclick="startGame()">[ 게임 시작 ]</button>
+    <button class="btn-stats" onclick="showStats()">[ 📊 나의 기록 ]</button>
   </div>
 </div>
 
@@ -703,11 +724,11 @@ body.shake { animation: shake 0.4s ease; }
 <div id="game-screen" class="screen">
   <div class="hud">
     <div class="hud-item">Q <span id="hud-q">1</span>/<span id="hud-total">10</span></div>
-    <div class="hud-item">STREAK <span id="hud-streak">0</span></div>
-    <div class="hud-item">CORRECT <span id="hud-correct">0</span></div>
-    <div class="hud-score">SCORE <span id="hud-score">0</span></div>
-    <div class="hud-item" id="hud-hearts-wrap" style="display:none">❤️ <span id="hud-hearts">5</span></div>
-    <button id="btn-mute" onclick="toggleMute()" style="background:none;border:1px solid var(--green-dim);color:var(--green-dim);font-family:var(--mono);font-size:0.7rem;padding:3px 8px;cursor:pointer;letter-spacing:0.05em;" title="사운드 ON/OFF">🔊 SND</button>
+    <div class="hud-item">연속 <span id="hud-streak">0</span></div>
+    <div class="hud-item">정답 <span id="hud-correct">0</span></div>
+    <div class="hud-score">점수 <span id="hud-score">0</span></div>
+    <div class="hud-item" id="hud-hearts-wrap" style="display:none"><span id="hud-hearts"></span></div>
+    <button id="btn-mute" onclick="toggleMute()" style="background:none;border:1px solid var(--green-dim);color:var(--green-dim);font-family:var(--mono);font-size:0.7rem;padding:3px 8px;cursor:pointer;letter-spacing:0.05em;" title="사운드 ON/OFF">🔊 소리</button>
   </div>
 
   <div class="game-body">
@@ -752,7 +773,7 @@ body.shake { animation: shake 0.4s ease; }
       max-width: 420px;
     "></div>
     <div class="result-delta" id="result-delta"></div>
-    <button class="btn-next" onclick="nextQuestion()">NEXT &gt;</button>
+    <button class="btn-next" onclick="nextQuestion()">다음 &gt;</button>
   </div>
 </div>
 
@@ -769,7 +790,7 @@ body.shake { animation: shake 0.4s ease; }
 <!-- ========== STATS SCREEN ========== -->
 <div id="stats-screen" class="screen">
   <div class="crt-title">
-    <h1>MY STATS</h1>
+    <h1>나의 기록</h1>
   </div>
   <div id="stats-content"></div>
   <div id="stats-back-wrap"></div>
@@ -966,7 +987,7 @@ let currentStep = 0;
 let answerPath = [];
 let maxStreak = 0;
 let questionLog = [];
-let gameMode = 'practice';  // 'practice' | 'ranking'
+let gameMode = 'ranking';  // 'practice' | 'ranking'
 let hearts = 5;             // 랭킹 모드 전용
 
 // ===================== INIT =====================
@@ -1040,6 +1061,17 @@ function pickQuestions(count) {
 }
 
 // ===================== GAME FLOW =====================
+function renderHearts() {
+  const el = document.getElementById('hud-hearts');
+  el.innerHTML = '';
+  for (let i = 0; i < 5; i++) {
+    const span = document.createElement('span');
+    span.textContent = i < hearts ? '❤️' : '🖤';
+    span.style.fontSize = '1rem';
+    el.appendChild(span);
+  }
+}
+
 function startGame() {
   audio.init();
   audio.startBGM();
@@ -1070,7 +1102,7 @@ function startGame() {
 
   const heartsWrap = document.getElementById('hud-hearts-wrap');
   if (gameMode === 'ranking') {
-    document.getElementById('hud-hearts').textContent = hearts;
+    renderHearts();
     heartsWrap.style.display = '';
   } else {
     heartsWrap.style.display = 'none';
@@ -1187,8 +1219,13 @@ function handleClick(code, btn) {
     if (gameMode === 'ranking') {
       // 랭킹 모드: hearts 차감 후 result-overlay 표시
       hearts -= 1;
-      document.getElementById('hud-hearts').textContent = hearts;
-      showResult(false, 0);
+      renderHearts();
+      const partialDelta = Math.round(currentStep / answerPath.length * 100);
+      if (partialDelta > 0) {
+        score += partialDelta;
+        document.getElementById('hud-score').textContent = score;
+      }
+      showResult(false, partialDelta);
       // hearts 소진 시 nextQuestion()에서 showFinal()로 분기됨
     }
     // 연습 모드: result-overlay 표시 없이 계속 클릭 가능
@@ -1208,7 +1245,8 @@ function onCorrect() {
   correctCount++;
   streak++;
   if (streak > maxStreak) maxStreak = streak;
-  const delta = 100;
+  const totalSteps = answerPath.length;
+  const delta = Math.round((currentStep + 1) / totalSteps * 100);
   score += delta;
 
   document.getElementById('hud-correct').textContent = correctCount;
@@ -1228,19 +1266,19 @@ function showResult(correct, delta) {
   const book = questions[qIndex];
   const overlay = document.getElementById('result-overlay');
 
-  document.getElementById('result-status').textContent = correct ? '[ CORRECT ]' : '[ INCORRECT ]';
+  document.getElementById('result-status').textContent = correct ? '[ 정답 ]' : '[ 오답 ]';
   document.getElementById('result-status').className = 'result-status ' + (correct ? 'ok' : 'fail');
   document.getElementById('result-book').textContent = book.title;
 
   // Path nodes
   const pathEl = document.getElementById('result-path');
-  pathEl.innerHTML = answerPath.map(c =>
-    `<span class="path-node">${c} ${NAME_MAP[c] || ''}</span>`
-  ).join('<span style="color:var(--green-dim)"> ▶ </span>');
+  pathEl.innerHTML = answerPath.map((c, i) => {
+    const passed = !correct && i < currentStep;
+    const style = passed ? 'font-weight:700;border-color:var(--green);color:var(--green)' : '';
+    return `<span class="path-node" style="${style}">${c} ${NAME_MAP[c] || ''}</span>`;
+  }).join('<span style="color:var(--green-dim)"> ▶ </span>');
 
-  document.getElementById('result-delta').textContent = correct
-    ? `+${delta} pts`
-    : '+0 pts';
+  document.getElementById('result-delta').textContent = `+${delta}점`;
 
   // 해설 생성
   const explanationEl = document.getElementById('result-explanation');
@@ -1366,9 +1404,9 @@ function showFinal() {
     let bestHtml = '';
     if (score > prevBest) {
       localStorage.setItem(bestKey, score);
-      bestHtml = `<div style="color:var(--amber);font-size:1.1rem;margin-top:8px">🏆 NEW BEST!</div><div>BEST: ${score} pts</div>`;
+      bestHtml = `<div style="color:var(--amber);font-size:1.1rem;margin-top:8px">🏆 NEW BEST!</div><div>최고: ${score}점</div>`;
     } else {
-      bestHtml = `<div>BEST: ${prevBest} pts</div>`;
+      bestHtml = `<div>최고: ${prevBest}점</div>`;
     }
     const bestEl = document.createElement('div');
     bestEl.id = 'final-best';
@@ -1408,7 +1446,7 @@ function showFinal() {
         const isThis = (r.ts === historyAll[0].ts);
         const glow = isThis ? 'box-shadow:0 0 10px rgba(0,255,65,0.4);background:var(--green-dark);padding:2px 6px;' : '';
         return `<div style="display:flex;justify-content:space-between;${glow}">
-          <span>${medals[i]} ${r.score} pts</span>
+          <span>${medals[i]} ${r.score}점</span>
           <span style="color:var(--green-dim)">${r.date}</span>
         </div>`;
       }).join('');
@@ -1531,21 +1569,22 @@ function backToSetup() {
   document.getElementById('setup-screen').style.display = 'flex';
 
   // 모드/하트 초기화
-  gameMode = 'practice';
+  gameMode = 'ranking';
   hearts = 5;
+  renderHearts();
 
   // HUD hearts 숨김
   document.getElementById('hud-hearts-wrap').style.display = 'none';
 
-  // mode chip UI 리셋 (PRACTICE active)
+  // mode chip UI 리셋 (RANKING active)
   const modeGroup = document.getElementById('mode-chips');
   modeGroup.querySelectorAll('.chip').forEach(c => {
-    c.classList.toggle('active', c.dataset.value === 'practice');
+    c.classList.toggle('active', c.dataset.value === 'ranking');
   });
 
-  // domain/count chips 영역 다시 표시
-  document.getElementById('domain-chips-wrap').style.display = '';
-  document.getElementById('count-chips-wrap').style.display  = '';
+  // 실전 모드 기본값: domain/count chips 영역 숨김
+  document.getElementById('domain-chips-wrap').style.display = 'none';
+  document.getElementById('count-chips-wrap').style.display  = 'none';
 }
 
 // ===================== MY STATS =====================
@@ -1558,7 +1597,7 @@ function showStats() {
 
   const content = document.getElementById('stats-content');
   const backWrap = document.getElementById('stats-back-wrap');
-  backWrap.innerHTML = '<button class="btn-stats" onclick="backFromStats()">[ BACK ]</button>';
+  backWrap.innerHTML = '<button class="btn-stats" onclick="backFromStats()">[ 뒤로 ]</button>';
 
   if (history.length === 0) {
     content.innerHTML = `<div style="font-family:var(--mono);color:var(--green-dim);font-size:1.1rem;letter-spacing:0.15em">// NO RECORDS YET</div>`;
@@ -1571,29 +1610,31 @@ function showStats() {
 
   const summaryHtml = `
     <div class="stats-box">
-      <h2>// SUMMARY</h2>
+      <h2>// 요약</h2>
       <div class="stats-grid">
-        <div class="cell"><span class="val">${bestScore}</span><span class="lbl">BEST SCORE</span></div>
-        <div class="cell"><span class="val">${totalGames}</span><span class="lbl">TOTAL GAMES</span></div>
-        <div class="cell"><span class="val">${avgAccuracy}%</span><span class="lbl">AVG ACCURACY</span></div>
+        <div class="cell"><span class="val">${bestScore}</span><span class="lbl">최고 점수</span></div>
+        <div class="cell"><span class="val">${totalGames}</span><span class="lbl">총 게임 수</span></div>
+        <div class="cell"><span class="val">${avgAccuracy}%</span><span class="lbl">평균 정확도</span></div>
       </div>
     </div>`;
 
   const recent10 = history.slice(0, 10).reverse();
   const maxS = Math.max(...recent10.map(r => r.score), 1);
   const bars = recent10.map(r => {
-    const h = Math.max(4, Math.round((r.score / maxS) * 76));
+    const h = Math.max(8, Math.round((r.score / maxS) * 100));
     const isBest = r.score === bestScore;
-    const mmdd = r.date.slice(5).replace('-','/');
-    return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:20px">
-      <div class="bar${isBest ? ' best' : ''}" style="height:${h}px;width:100%"></div>
-      <div style="font-size:0.6rem;color:var(--green-dim);margin-top:2px;writing-mode:vertical-rl;transform:rotate(180deg);line-height:1">${mmdd}</div>
+    const mmdd = r.date.slice(5).replace('-', '/');
+    const scoreColor = isBest ? 'var(--amber)' : 'var(--green-dim)';
+    return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:24px">
+      <div style="font-size:0.6rem;color:${scoreColor};margin-bottom:3px;text-align:center;line-height:1">${r.score}</div>
+      <div class="bar${isBest ? ' best' : ''}" style="height:${h}px;width:100%;flex:none"></div>
+      <div style="font-size:0.65rem;color:var(--green-dim);margin-top:4px;text-align:center;line-height:1">${mmdd}</div>
     </div>`;
   }).join('');
 
   const chartHtml = `
     <div class="stats-box">
-      <h2>// SCORE HISTORY (최근 ${recent10.length}게임)</h2>
+      <h2>// 점수 기록 (최근 ${recent10.length}게임)</h2>
       <div class="bar-chart">${bars}</div>
     </div>`;
 
@@ -1643,7 +1684,7 @@ function showStats() {
     const style = isBest ? 'color:var(--amber)' : 'color:var(--text)';
     return `<div style="display:flex;justify-content:space-between;font-size:0.78rem;padding:4px 0;border-bottom:1px solid var(--border);${style}">
       <span>${r.date}</span>
-      <span>${r.score} pts</span>
+      <span>${r.score}점</span>
       <span>${r.accuracy}%</span>
       <span>${r.survived}문제</span>
     </div>`;
@@ -1658,7 +1699,7 @@ function showStats() {
         </div>
         ${historyRows}
       </div>
-      <button class="btn-stats btn-danger" onclick="clearHistory()">[ CLEAR HISTORY ]</button>
+      <button class="btn-stats btn-danger" onclick="clearHistory()">[ 기록 삭제 ]</button>
     </div>`;
 
   content.innerHTML = summaryHtml + chartHtml + domainHtml + histHtml;
@@ -1716,7 +1757,7 @@ function toggleMute() {
   audio.init();
   audio.setMute(!audio.muted);
   const btn = document.getElementById('btn-mute');
-  if (btn) btn.textContent = audio.muted ? '🔇 SND' : '🔊 SND';
+  if (btn) btn.textContent = audio.muted ? '🔇 소리' : '🔊 소리';
 }
 </script>
 </body>
