@@ -1034,15 +1034,18 @@ let hearts = 5;             // 랭킹 모드 전용
 
 // ===================== INIT =====================
 async function loadBooks() {
+  document.getElementById('data-count-label').textContent = '도서 데이터 불러오는 중...';
   try {
     const res = await fetch('books_cache.json');
     if (!res.ok) throw new Error('no cache');
     const data = await res.json();
     books = data.books || [];
-    document.getElementById('book-count').textContent = books.length.toLocaleString();
     if (books.length === 0) throw new Error('empty');
+    document.getElementById('data-count-label').innerHTML = '국립중앙도서관 도서 데이터 : <span id="book-count"></span>권 수록';
+    document.getElementById('book-count').textContent = books.length.toLocaleString();
   } catch (e) {
     console.error('[KDC] Failed to load books_cache.json', e);
+    document.getElementById('data-count-label').textContent = '도서 데이터 로드 실패';
   }
 }
 
