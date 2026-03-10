@@ -120,9 +120,31 @@ body.shake { animation: shake 0.4s ease; }
 
 .crt-title p {
   color: var(--green-dim);
-  font-size: 0.85rem;
+  font-size: 1.1rem;
   margin-top: 0.5rem;
   letter-spacing: 0.1em;
+}
+
+#data-count-label {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--green-dim);
+  text-align: center;
+  margin: 0;
+  opacity: 0.8;
+}
+
+.setup-footer {
+  font-size: 0.65rem;
+  color: var(--green-dim);
+  opacity: 0.5;
+  text-align: center;
+  margin: 0;
+}
+
+.setup-footer a {
+  color: var(--green-dim);
+  text-decoration: none;
 }
 
 .setup-box {
@@ -532,7 +554,6 @@ body.shake { animation: shake 0.4s ease; }
 /* ===================== LARGE SCREEN ===================== */
 @media (min-width: 1400px) {
   .book-panel { max-width: 420px; }
-  .book-cover img { object-fit: contain; }
   .btn-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
 }
 
@@ -709,8 +730,10 @@ body.shake { animation: shake 0.4s ease; }
 <div id="setup-screen" class="screen">
   <div class="crt-title">
     <h1>KDC CLASSIFIER</h1>
-    <p>한국십진분류법 드릴다운 학습 게임</p>
+    <p>도서관 분류 실습 게임</p>
   </div>
+
+  <p id="data-count-label">KDC 6판 | 국립중앙도서관 도서 데이터 : <span id="book-count">-</span>권 수록</p>
 
   <div class="setup-box">
     <h2>// 게임 설정</h2>
@@ -753,6 +776,8 @@ body.shake { animation: shake 0.4s ease; }
     <button class="btn-start" onclick="startGame()">[ 게임 시작 ]</button>
     <button class="btn-stats" onclick="showStats()">[ 📊 나의 기록 ]</button>
   </div>
+
+  <p class="setup-footer"><a href="https://github.com/kdc-min/kdc-classifier" target="_blank" rel="noopener">GitHub</a> | 도서 데이터 출처 : 도서관 정보나루 (국립중앙도서관)</p>
 </div>
 
 <!-- ========== GAME SCREEN ========== -->
@@ -1013,6 +1038,7 @@ async function loadBooks() {
     if (!res.ok) throw new Error('no cache');
     const data = await res.json();
     books = data.books || [];
+    document.getElementById('book-count').textContent = books.length.toLocaleString();
     if (books.length === 0) throw new Error('empty');
   } catch (e) {
     console.error('[KDC] Failed to load books_cache.json', e);
