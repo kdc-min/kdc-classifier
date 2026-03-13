@@ -1073,6 +1073,13 @@ let questionLog = [];
 let gameMode = 'ranking';  // 'practice' | 'ranking'
 let hearts = 5;             // 랭킹 모드 전용
 
+// ===================== HELPERS =====================
+function decodeHtmlEntities(str) {
+  const txt = document.createElement('textarea');
+  txt.innerHTML = str;
+  return txt.value;
+}
+
 // ===================== INIT =====================
 async function loadBooks() {
   document.getElementById('data-count-label').textContent = '도서 데이터 불러오는 중...';
@@ -1218,7 +1225,7 @@ function loadQuestion() {
   const descEl = document.getElementById('book-desc');
   const infoText = book.description || book.keywords || '';
   if (infoText) {
-    descEl.textContent = infoText;
+    descEl.textContent = decodeHtmlEntities(infoText);
     descEl.style.display = '';
   } else {
     descEl.style.display = 'none';
@@ -1310,6 +1317,12 @@ function handleClick(code, btn) {
         score += partialDelta;
         document.getElementById('hud-score').textContent = score;
       }
+      // 오답 즉시 로그 기록 (nextQuestion 보정 로직 의존 제거)
+      questionLog.push({
+        book: questions[qIndex],
+        correct: false,
+        answerPath: [...answerPath],
+      });
       showResult(false, partialDelta);
       // hearts 소진 시 nextQuestion()에서 showFinal()로 분기됨
     }
@@ -1371,15 +1384,6 @@ function showResult(correct, delta) {
 function nextQuestion() {
   document.getElementById('result-overlay').classList.remove('show');
 
-  // 아직 로그에 없으면 (오답으로 넘어간 경우) 기록
-  if (questionLog.length <= qIndex) {
-    questionLog.push({
-      book: questions[qIndex],
-      correct: false,
-      answerPath: [...answerPath],
-    });
-  }
-
   // 랭킹 모드: hearts 소진 시 종료
   if (gameMode === 'ranking' && hearts <= 0) {
     showFinal();
@@ -1390,7 +1394,14 @@ function nextQuestion() {
 
   if (gameMode === 'ranking' && qIndex >= questions.length) {
     // 문제 소진 시 재shuffle 후 계속 진행
+    const lastIsbn = questions[questions.length - 1].isbn13;
     questions = questions.slice().sort(() => Math.random() - 0.5);
+    // 직전 마지막 문제와 첫 문제가 같으면 swap
+    if (questions[0].isbn13 === lastIsbn && questions.length > 1) {
+      const tmp = questions[0];
+      questions[0] = questions[1];
+      questions[1] = tmp;
+    }
     qIndex = 0;
     loadQuestion();
   } else if (qIndex >= questions.length) {
@@ -1465,7 +1476,7 @@ function showFinal() {
     }
     const bestEl = document.createElement('div');
     bestEl.id = 'final-best';
-    bestEl.style.cssText = 'margin-top:8px;font-family:var(--mono);font-size:0.9rem;text-align:center;';
+    bestEl.style.cssText = 'margin-top:8px;font-family:var(--pixel);font-size:0.9rem;text-align:center;';
     bestEl.innerHTML = bestHtml;
     const finalStats = document.getElementById('final-stats');
     finalStats.parentNode.insertBefore(bestEl, finalStats);
@@ -1486,7 +1497,7 @@ function showFinal() {
     const rankIdx = sortedAll.findIndex(r => r.ts === historyAll[0].ts);
     const rankEl = document.createElement('div');
     rankEl.id = 'final-rank';
-    rankEl.style.cssText = 'font-family:var(--mono);font-size:1rem;color:var(--gold);text-align:center;margin-top:8px;';
+    rankEl.style.cssText = 'font-family:var(--pixel);font-size:1rem;color:var(--gold);text-align:center;margin-top:8px;';
     rankEl.textContent = `#${rankIdx + 1} / ${historyAll.length} games`;
     finalScreen.appendChild(rankEl);
 
@@ -1495,7 +1506,7 @@ function showFinal() {
     const top3 = sortedAll.slice(0, 3);
     const top3El = document.createElement('div');
     top3El.id = 'final-top3';
-    top3El.style.cssText = 'width:100%;max-width:480px;font-family:var(--mono);font-size:0.85rem;';
+    top3El.style.cssText = 'width:100%;max-width:480px;font-family:var(--pixel);font-size:0.85rem;';
     top3El.innerHTML = '<div style="color:var(--gold);margin-bottom:6px">// 역대 TOP 3</div>' +
       top3.map((r, i) => {
         const isThis = (r.ts === historyAll[0].ts);
@@ -1545,7 +1556,7 @@ function showFinal() {
       const cumEl = document.createElement('div');
       cumEl.id = 'final-cum-domain';
       cumEl.style.cssText = 'width:100%;max-width:480px;font-family:var(--sans);margin-top:8px;';
-      cumEl.innerHTML = '<div style="color:var(--gold);margin-bottom:6px;font-family:var(--mono);font-size:0.8rem">// 분야별 누적 vs 이번</div>' + domCumRows;
+      cumEl.innerHTML = '<div style="color:var(--gold);margin-bottom:6px;font-family:var(--pixel);font-size:0.8rem">// 분야별 누적 vs 이번</div>' + domCumRows;
       finalScreen.appendChild(cumEl);
     }
   }
@@ -1622,7 +1633,6 @@ function backToSetup() {
   // 모드/하트 초기화
   gameMode = 'ranking';
   hearts = 5;
-  renderHearts();
 
   // HUD hearts 숨김
   document.getElementById('hud-hearts-wrap').style.display = 'none';
@@ -1651,7 +1661,7 @@ function showStats() {
   backWrap.innerHTML = '<button class="btn-stats" onclick="backFromStats()">[ 뒤로 ]</button>';
 
   if (history.length === 0) {
-    content.innerHTML = `<div style="font-family:var(--mono);color:var(--darkgray);font-size:1.1rem;letter-spacing:0.15em">// 기록 없음</div>`;
+    content.innerHTML = `<div style="font-family:var(--pixel);color:var(--darkgray);font-size:1.1rem;letter-spacing:0.15em">// 기록 없음</div>`;
     return;
   }
 
@@ -1740,7 +1750,7 @@ function showStats() {
   const histHtml = `
     <div class="stats-box">
       <h2>// 게임 히스토리</h2>
-      <div style="font-family:var(--mono);max-height:280px;overflow-y:auto">
+      <div style="font-family:var(--sans);max-height:280px;overflow-y:auto">
         <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:var(--darkgray);margin-bottom:6px">
           <span>날짜</span><span>점수</span><span>정확도</span><span>생존</span>
         </div>
@@ -1774,7 +1784,7 @@ function noImgPlaceholder(title) {
 
 function handleImgError(el) {
   el.style.display = 'none';
-  const book = questions[qIndex];
+  const book = questions && questions[qIndex];
   noImgPlaceholder(book ? book.title : '');
 }
 
