@@ -645,7 +645,55 @@ body.shake { animation: shake 0.4s steps(4, end); }
   .kdc-name { font-size: 1.05rem; }
 }
 
-/* ===================== STATS SCREEN ===================== */
+/* ===================== BOOK STICKY HEADER (모바일 전용) ===================== */
+#book-sticky {
+  display: none; /* 데스크톱 기본 숨김 */
+}
+
+@media (max-width: 768px) {
+  #book-sticky {
+    position: fixed;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    background: var(--black);
+    border-bottom: 2px solid var(--gold);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 1rem;
+    transform: translateY(-100%);
+    opacity: 0;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+    pointer-events: none;
+  }
+
+  #book-sticky.visible {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  #book-sticky-img {
+    width: 32px;
+    height: 42px;
+    object-fit: cover;
+    border: 2px solid var(--gold);
+    flex-shrink: 0;
+    background: var(--darkgray);
+  }
+
+  #book-sticky-title {
+    font-family: var(--sans);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--cream);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
 #stats-screen {
   display: none;
   flex-direction: column;
@@ -830,6 +878,12 @@ body.shake { animation: shake 0.4s steps(4, end); }
     <div class="hud-score">점수 <span id="hud-score">0</span></div>
     <div class="hud-item" id="hud-hearts-wrap" style="display:none"><span id="hud-hearts"></span></div>
     <button id="btn-mute" onclick="toggleMute()" style="background:var(--white);border:2px solid var(--black);box-shadow:2px 2px 0 var(--black);color:var(--black);font-family:var(--pixel);font-size:0.5rem;padding:4px 8px;cursor:pointer;letter-spacing:0.05em;" title="사운드 ON/OFF">SOUND [O]</button>
+  </div>
+
+  <!-- 모바일 스크롤 시 책 정보 sticky 미니 헤더 -->
+  <div id="book-sticky">
+    <img id="book-sticky-img" src="" alt="">
+    <div id="book-sticky-title"></div>
   </div>
 
   <div class="game-body">
@@ -1202,6 +1256,31 @@ function startGame() {
   }
 
   loadQuestion();
+
+  // 모바일 sticky 헤더 스크롤 감지 (최초 1회 등록)
+  if (!window._stickyScrollBound) {
+    window._stickyScrollBound = true;
+    const onScroll = () => {
+      if (window.innerWidth > 768) return;
+      const sticky = document.getElementById('book-sticky');
+      const bookPanel = document.querySelector('.book-panel');
+      const hud = document.querySelector('.hud');
+      if (!sticky || !bookPanel) return;
+
+      // fixed 위치를 HUD 바로 아래로 동적 세팅
+      const hudH = hud ? hud.getBoundingClientRect().height : 44;
+      sticky.style.top = hudH + 'px';
+
+      const panelBottom = bookPanel.getBoundingClientRect().bottom;
+      if (panelBottom < hudH) {
+        sticky.classList.add('visible');
+      } else {
+        sticky.classList.remove('visible');
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    document.addEventListener('scroll', onScroll, { passive: true });
+  }
 }
 
 function loadQuestion() {
@@ -1221,6 +1300,16 @@ function loadQuestion() {
   // Book panel
   renderBookCover(book);
   document.getElementById('book-title').textContent = book.title || '';
+
+  // 모바일 sticky 헤더 정보 업데이트
+  const stickyImg = document.getElementById('book-sticky-img');
+  const stickyTitle = document.getElementById('book-sticky-title');
+  if (stickyImg && stickyTitle) {
+    stickyImg.src = book.bookImageB64 || book.bookImageURL || '';
+    stickyTitle.textContent = book.title || '';
+    // 새 문제마다 sticky 숨김 초기화
+    document.getElementById('book-sticky').classList.remove('visible');
+  }
   document.getElementById('book-author').textContent = book.author || '—';
   const descEl = document.getElementById('book-desc');
   const infoText = book.description || book.keywords || '';
@@ -1383,6 +1472,7 @@ function showResult(correct, delta) {
 
 function nextQuestion() {
   document.getElementById('result-overlay').classList.remove('show');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 
   // 랭킹 모드: hearts 소진 시 종료
   if (gameMode === 'ranking' && hearts <= 0) {
