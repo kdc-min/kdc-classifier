@@ -196,6 +196,50 @@ body.shake { animation: shake 0.4s steps(4, end); }
   box-shadow: none;
 }
 
+.btn-start:disabled {
+  background: var(--gray);
+  border-color: var(--darkgray);
+  box-shadow: 4px 4px 0 var(--darkgray);
+  color: var(--cream);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-start:disabled:hover,
+.btn-start:disabled:active {
+  transform: none;
+  box-shadow: 4px 4px 0 var(--darkgray);
+}
+
+/* 로딩 프로그레스 바 */
+#loading-bar-wrap {
+  margin-top: 6px;
+  display: none;
+}
+
+#loading-bar-track {
+  height: 8px;
+  background: var(--white);
+  border: 2px solid var(--black);
+  box-shadow: 2px 2px 0 var(--black);
+  width: 100%;
+}
+
+#loading-bar-fill {
+  height: 100%;
+  background: var(--red);
+  width: 0%;
+  transition: width 0.2s steps(6, end);
+}
+
+#loading-bar-text {
+  font-family: var(--pixel);
+  font-size: 0.45rem;
+  color: var(--darkgray);
+  margin-top: 4px;
+  letter-spacing: 0.05em;
+}
+
 /* ===================== GAME SCREEN ===================== */
 #game-screen {
   display: none;
@@ -823,6 +867,10 @@ body.shake { animation: shake 0.4s steps(4, end); }
   </div>
 
   <p id="data-count-label">KDC 6판 | 국립중앙도서관 도서 데이터 : <span id="book-count">-</span>권 수록</p>
+  <div id="loading-bar-wrap">
+    <div id="loading-bar-track"><div id="loading-bar-fill"></div></div>
+    <div id="loading-bar-text">LOADING... 0%</div>
+  </div>
 
   <div class="setup-box">
     <h2>GAME SETUP</h2>
@@ -862,7 +910,7 @@ body.shake { animation: shake 0.4s steps(4, end); }
       </div>
     </div>
 
-    <button class="btn-start" onclick="startGame()">▶ GAME START</button>
+    <button class="btn-start" id="btn-start" onclick="startGame()" disabled>LOADING...</button>
     <button class="btn-stats" onclick="showStats()">★ MY RECORD</button>
   </div>
 
@@ -1137,17 +1185,63 @@ function decodeHtmlEntities(str) {
 // ===================== INIT =====================
 async function loadBooks() {
   document.getElementById('data-count-label').textContent = '도서 데이터 불러오는 중...';
+  const barWrap = document.getElementById('loading-bar-wrap');
+  const barFill = document.getElementById('loading-bar-fill');
+  const barText = document.getElementById('loading-bar-text');
+  barWrap.style.display = 'block';
+
   try {
     const res = await fetch('books_cache.json');
     if (!res.ok) throw new Error('no cache');
-    const data = await res.json();
+
+    const contentLength = res.headers.get('Content-Length');
+    const total = contentLength ? parseInt(contentLength, 10) : null;
+
+    const reader = res.body.getReader();
+    const chunks = [];
+    let received = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.length;
+      if (total) {
+        const pct = Math.min(Math.floor(received / total * 100), 99);
+        barFill.style.width = pct + '%';
+        barText.textContent = 'LOADING... ' + pct + '%';
+      }
+    }
+
+    // 합치고 파싱
+    const combined = new Uint8Array(received);
+    let offset = 0;
+    for (const chunk of chunks) { combined.set(chunk, offset); offset += chunk.length; }
+    const text = new TextDecoder('utf-8').decode(combined);
+    const data = JSON.parse(text);
+
     books = data.books || [];
     if (books.length === 0) throw new Error('empty');
+
+    // 완료
+    barFill.style.width = '100%';
+    barText.textContent = 'LOADING... 100%';
+    setTimeout(() => { barWrap.style.display = 'none'; }, 600);
+
     document.getElementById('data-count-label').innerHTML = 'KDC 6판 | 국립중앙도서관 도서 데이터 : <span id="book-count"></span>권 수록';
     document.getElementById('book-count').textContent = books.length.toLocaleString();
+
+    const btn = document.getElementById('btn-start');
+    btn.disabled = false;
+    btn.textContent = '▶ GAME START';
+
   } catch (e) {
     console.error('[KDC] Failed to load books_cache.json', e);
     document.getElementById('data-count-label').textContent = '도서 데이터 로드 실패';
+    barWrap.style.display = 'none';
+    const btn = document.getElementById('btn-start');
+    btn.disabled = false;
+    btn.textContent = '▶ GAME START';
   }
 }
 
