@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://kdc-min.github.io/kdc-classifier/sitemap.xml
