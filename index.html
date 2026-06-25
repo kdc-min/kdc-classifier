@@ -211,6 +211,36 @@ body.shake { animation: shake 0.4s steps(4, end); }
   box-shadow: 4px 4px 0 var(--black);
 }
 
+/* 로딩 프로그레스 바 */
+#loading-bar-wrap {
+  margin-top: 6px;
+  display: none;
+  width: min(500px, 100%);
+}
+
+#loading-bar-track {
+  height: 8px;
+  background: var(--white);
+  border: 2px solid var(--black);
+  box-shadow: 2px 2px 0 var(--black);
+  width: 100%;
+}
+
+#loading-bar-fill {
+  height: 100%;
+  background: var(--red);
+  width: 0%;
+  transition: width 0.2s steps(6, end);
+}
+
+#loading-bar-text {
+  font-family: var(--pixel);
+  font-size: 0.45rem;
+  color: var(--darkgray);
+  margin-top: 4px;
+  letter-spacing: 0.05em;
+}
+
 /* ===================== GAME SCREEN ===================== */
 #game-screen {
   display: none;
@@ -668,6 +698,55 @@ body.shake { animation: shake 0.4s steps(4, end); }
   .kdc-name { font-size: 1.05rem; }
 }
 
+/* ===================== BOOK STICKY HEADER (모바일 전용) ===================== */
+#book-sticky {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  #book-sticky {
+    position: fixed;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    background: var(--black);
+    border-bottom: 2px solid var(--gold);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 1rem;
+    transform: translateY(-100%);
+    opacity: 0;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+    pointer-events: none;
+  }
+
+  #book-sticky.visible {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  #book-sticky-img {
+    width: 32px;
+    height: 42px;
+    object-fit: cover;
+    border: 2px solid var(--gold);
+    flex-shrink: 0;
+    background: var(--darkgray);
+  }
+
+  #book-sticky-title {
+    font-family: var(--sans);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--cream);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
 /* ===================== STATS SCREEN ===================== */
 #stats-screen {
   display: none;
@@ -854,6 +933,10 @@ body.shake { animation: shake 0.4s steps(4, end); }
   </div>
 
   <p id="data-count-label">KDC 6판 | 출제 도서 데이터 : <span id="book-count">-</span>권</p>
+  <div id="loading-bar-wrap">
+    <div id="loading-bar-track"><div id="loading-bar-fill"></div></div>
+    <div id="loading-bar-text">LOADING... 0%</div>
+  </div>
 
   <div class="setup-box">
     <h2>GAME SETUP</h2>
@@ -910,6 +993,12 @@ body.shake { animation: shake 0.4s steps(4, end); }
     <div class="hud-score">점수 <span id="hud-score">0</span></div>
     <div class="hud-item" id="hud-hearts-wrap" style="display:none"><span id="hud-hearts"></span></div>
     <button id="btn-mute" onclick="toggleMute()" style="background:var(--white);border:2px solid var(--black);box-shadow:2px 2px 0 var(--black);color:var(--black);font-family:var(--pixel);font-size:0.5rem;padding:4px 8px;cursor:pointer;letter-spacing:0.05em;" title="사운드 ON/OFF">SOUND [O]</button>
+  </div>
+
+  <!-- 모바일 스크롤 시 책 정보 sticky 미니 헤더 -->
+  <div id="book-sticky">
+    <img id="book-sticky-img" src="" alt="">
+    <div id="book-sticky-title"></div>
   </div>
 
   <div class="game-body">
@@ -1176,6 +1265,12 @@ let inputLocked = false;
 let currentQuestionLogged = false;
 
 // ===================== INIT =====================
+function decodeHtmlEntities(str) {
+  const txt = document.createElement('textarea');
+  txt.innerHTML = str;
+  return txt.value;
+}
+
 function isPlayableBook(book) {
   return book.class_no && PARENT_MAP[String(book.class_no)] !== undefined;
 }
@@ -1190,14 +1285,61 @@ function setStartEnabled(enabled) {
 async function loadBooks() {
   document.getElementById('data-count-label').textContent = '도서 데이터 불러오는 중...';
   setStartEnabled(false);
+  const barWrap = document.getElementById('loading-bar-wrap');
+  const barFill = document.getElementById('loading-bar-fill');
+  const barText = document.getElementById('loading-bar-text');
+  if (barWrap && barFill && barText) {
+    barWrap.style.display = 'block';
+    barFill.style.width = '0%';
+    barText.textContent = 'LOADING... 0%';
+  }
+
   try {
     const res = await fetch('books_cache.json');
     if (!res.ok) throw new Error('no cache');
-    const data = await res.json();
+
+    let data;
+    if (res.body && typeof res.body.getReader === 'function') {
+      const contentLength = res.headers.get('Content-Length');
+      const total = contentLength ? parseInt(contentLength, 10) : null;
+      const reader = res.body.getReader();
+      const chunks = [];
+      let received = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        received += value.length;
+        if (total && barFill && barText) {
+          const pct = Math.min(Math.floor(received / total * 100), 99);
+          barFill.style.width = pct + '%';
+          barText.textContent = 'LOADING... ' + pct + '%';
+        }
+      }
+
+      const combined = new Uint8Array(received);
+      let offset = 0;
+      for (const chunk of chunks) {
+        combined.set(chunk, offset);
+        offset += chunk.length;
+      }
+      data = JSON.parse(new TextDecoder('utf-8').decode(combined));
+    } else {
+      data = await res.json();
+    }
+
     books = (data.books || []).filter(isPlayableBook);
     rebuildUsedKdcCodes();
     if (books.length === 0) throw new Error('empty');
     booksLoaded = true;
+    if (barFill && barText) {
+      barFill.style.width = '100%';
+      barText.textContent = 'LOADING... 100%';
+    }
+    if (barWrap) {
+      setTimeout(() => { barWrap.style.display = 'none'; }, 600);
+    }
     document.getElementById('data-count-label').innerHTML = 'KDC 6판 | 출제 도서 데이터 : <span id="book-count"></span>권';
     document.getElementById('book-count').textContent = books.length.toLocaleString();
     setStartEnabled(true);
@@ -1205,6 +1347,9 @@ async function loadBooks() {
     console.error('[KDC] Failed to load books_cache.json', e);
     booksLoaded = false;
     setStartEnabled(false);
+    if (barWrap) {
+      barWrap.style.display = 'none';
+    }
     document.getElementById('data-count-label').textContent = '도서 데이터 로드 실패';
   }
 }
@@ -1317,6 +1462,11 @@ function filterBooksByDomain(domain) {
   return books.filter(b => b.class_no && String(b.class_no)[0] === prefix);
 }
 
+function getBookKey(book) {
+  if (!book) return '';
+  return String(book.isbn13 || `${book.title || ''}|${book.class_no || ''}`);
+}
+
 function pickQuestions(count) {
   const pool = filterBooksByDomain(selectedDomain).filter(isPlayableBook);
   if (pool.length === 0) { alert('선택한 분야에 분류 가능한 도서가 없습니다.'); return []; }
@@ -1353,6 +1503,39 @@ function renderHearts() {
       : '<span style="display:inline-block;width:12px;height:12px;background:var(--darkgray);clip-path:polygon(50% 90%,15% 40%,0% 25%,15% 10%,35% 10%,50% 25%,65% 10%,85% 10%,100% 25%,85% 40%);margin:0 2px;opacity:0.3;"></span>';
     el.appendChild(span);
   }
+}
+
+function syncBookStickyVisibility() {
+  const sticky = document.getElementById('book-sticky');
+  if (!sticky) return;
+
+  const gameScreen = document.getElementById('game-screen');
+  if (window.innerWidth > 768 || !gameScreen || gameScreen.style.display === 'none') {
+    sticky.classList.remove('visible');
+    return;
+  }
+
+  const bookPanel = document.querySelector('.book-panel');
+  const hud = document.querySelector('.hud');
+  if (!bookPanel) return;
+
+  const hudH = hud ? hud.getBoundingClientRect().height : 44;
+  sticky.style.top = hudH + 'px';
+
+  const panelBottom = bookPanel.getBoundingClientRect().bottom;
+  if (panelBottom < hudH) {
+    sticky.classList.add('visible');
+  } else {
+    sticky.classList.remove('visible');
+  }
+}
+
+function bindBookStickyScroll() {
+  if (window._stickyScrollBound) return;
+  window._stickyScrollBound = true;
+  window.addEventListener('scroll', syncBookStickyVisibility, { passive: true });
+  document.addEventListener('scroll', syncBookStickyVisibility, { passive: true });
+  window.addEventListener('resize', syncBookStickyVisibility, { passive: true });
 }
 
 function startGame() {
@@ -1399,6 +1582,8 @@ function startGame() {
   }
 
   loadQuestion();
+  bindBookStickyScroll();
+  syncBookStickyVisibility();
 }
 
 function loadQuestion() {
@@ -1420,11 +1605,25 @@ function loadQuestion() {
   // Book panel
   renderBookCover(book);
   document.getElementById('book-title').textContent = book.title || '';
+  const sticky = document.getElementById('book-sticky');
+  const stickyImg = document.getElementById('book-sticky-img');
+  const stickyTitle = document.getElementById('book-sticky-title');
+  if (sticky && stickyImg && stickyTitle) {
+    const stickySrc = book.bookImageB64 || book.bookImageURL || '';
+    if (stickySrc) {
+      stickyImg.src = stickySrc;
+    } else {
+      stickyImg.removeAttribute('src');
+    }
+    stickyImg.alt = book.title || '';
+    stickyTitle.textContent = book.title || '';
+    sticky.classList.remove('visible');
+  }
   document.getElementById('book-author').textContent = book.author || '—';
   const descEl = document.getElementById('book-desc');
   const infoText = book.description || book.keywords || '';
   if (infoText) {
-    descEl.textContent = infoText;
+    descEl.textContent = decodeHtmlEntities(infoText);
     descEl.style.display = '';
   } else {
     descEl.style.display = 'none';
@@ -1591,6 +1790,7 @@ function showResult(correct, delta) {
 
 function nextQuestion() {
   document.getElementById('result-overlay').classList.remove('show');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 
   // 아직 로그에 없으면 (오답으로 넘어간 경우) 기록
   logCurrentQuestion(false);
@@ -1605,7 +1805,13 @@ function nextQuestion() {
 
   if (isSurvivalMode() && qIndex >= questions.length) {
     // 문제 소진 시 재shuffle 후 계속 진행
+    const lastBookKey = getBookKey(questions[questions.length - 1]);
     questions = questions.slice().sort(() => Math.random() - 0.5);
+    if (questions.length > 1 && getBookKey(questions[0]) === lastBookKey) {
+      const tmp = questions[0];
+      questions[0] = questions[1];
+      questions[1] = tmp;
+    }
     qIndex = 0;
     loadQuestion();
   } else if (qIndex >= questions.length) {
@@ -1653,6 +1859,8 @@ function saveGameRecord() {
 function showFinal() {
   audio.playFanfare();
   audio.stopBGM();
+  const sticky = document.getElementById('book-sticky');
+  if (sticky) sticky.classList.remove('visible');
   document.getElementById('game-screen').style.display = 'none';
   document.getElementById('final-screen').style.display = 'flex';
 
@@ -1835,6 +2043,8 @@ function showFinal() {
 
 function backToSetup() {
   audio.stopBGM();
+  const sticky = document.getElementById('book-sticky');
+  if (sticky) sticky.classList.remove('visible');
   document.getElementById('final-screen').style.display = 'none';
   document.getElementById('setup-screen').style.display = 'flex';
 
