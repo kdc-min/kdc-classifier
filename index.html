@@ -173,6 +173,37 @@ body.shake { animation: shake 0.4s steps(4, end); }
   box-shadow: 2px 2px 0 var(--darkgray);
 }
 
+#mode-chips {
+  flex-wrap: nowrap;
+  gap: 0.4rem;
+}
+
+#mode-chips .chip {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 0.32rem 0.45rem;
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+#mode-chips .chip.active {
+  animation: difficultyTextPulse 1.55s ease-in-out infinite;
+}
+
+@keyframes difficultyTextPulse {
+  0%, 100% {
+    color: var(--cream);
+    text-shadow: none;
+  }
+  50% {
+    color: var(--gold);
+    text-shadow: 0 0 4px rgba(200, 120, 0, 0.55);
+  }
+}
+
 .btn-start {
   background: var(--red);
   border: 3px solid var(--black);
@@ -942,11 +973,11 @@ body.shake { animation: shake 0.4s steps(4, end); }
     <h2>GAME SETUP</h2>
 
     <div>
-      <div class="field-label">MODE</div>
+      <div class="field-label">난이도</div>
       <div class="chip-group" id="mode-chips">
-        <div class="chip" data-value="practice">연습 모드</div>
-        <div class="chip" data-value="student">이지 모드(EASY MODE)</div>
-        <div class="chip active" data-value="ranking">하드 모드(HARD MODE)</div>
+        <div class="chip" data-value="practice">연습</div>
+        <div class="chip" data-value="student">쉬움</div>
+        <div class="chip active" data-value="ranking">기본</div>
       </div>
     </div>
 
@@ -1227,9 +1258,9 @@ const CHILDREN_MAP = {"000": ["060", "003", "005", "030", "020", "080", "050", "
 
 
 const MODE_LABELS = {
-  practice: '연습 모드',
-  ranking: '하드 모드(HARD MODE)',
-  student: '이지 모드(EASY MODE)'
+  practice: '연습',
+  ranking: '기본',
+  student: '쉬움'
 };
 const MODE_HISTORY_KEYS = {
   ranking: 'kdc_history',
@@ -1259,7 +1290,7 @@ let answerPath = [];
 let maxStreak = 0;
 let questionLog = [];
 let gameMode = 'ranking';  // 'practice' | 'ranking' | 'student'
-let hearts = 5;             // 하드/이지 모드 전용
+let hearts = 5;             // 쉬움/기본 난이도 전용
 let booksLoaded = false;
 let inputLocked = false;
 let currentQuestionLogged = false;
@@ -1424,9 +1455,9 @@ function updateStatsButtonLabel() {
 
   btn.style.display = '';
   if (gameMode === 'student') {
-    btn.textContent = '★ 이지 기록';
+    btn.textContent = '★ 쉬움 기록';
   } else if (gameMode === 'ranking') {
-    btn.textContent = '★ 하드 기록';
+    btn.textContent = '★ 기본 기록';
   } else {
     btn.textContent = '★ 기록 보기';
   }
@@ -1720,7 +1751,7 @@ function handleClick(code, btn) {
     }, { once: true });
 
     if (isSurvivalMode()) {
-      // 하드/이지 모드: hearts 차감 후 result-overlay 표시
+      // 쉬움/기본 난이도: hearts 차감 후 result-overlay 표시
       inputLocked = true;
       setQuestionButtonsDisabled(true);
       hearts -= 1;
@@ -1734,7 +1765,7 @@ function handleClick(code, btn) {
       showResult(false, partialDelta);
       // hearts 소진 시 nextQuestion()에서 showFinal()로 분기됨
     }
-    // 연습 모드: result-overlay 표시 없이 계속 클릭 가능
+    // 연습 난이도: result-overlay 표시 없이 계속 클릭 가능
   }
 }
 
@@ -1795,7 +1826,7 @@ function nextQuestion() {
   // 아직 로그에 없으면 (오답으로 넘어간 경우) 기록
   logCurrentQuestion(false);
 
-  // 하드/이지 모드: hearts 소진 시 종료
+  // 쉬움/기본 난이도: hearts 소진 시 종료
   if (isSurvivalMode() && hearts <= 0) {
     showFinal();
     return;
@@ -1864,7 +1895,7 @@ function showFinal() {
   document.getElementById('game-screen').style.display = 'none';
   document.getElementById('final-screen').style.display = 'flex';
 
-  // 모드별 타이틀
+  // 난이도별 타이틀
   const finalTitle = document.querySelector('#final-screen h1');
   if (finalTitle) {
     finalTitle.textContent = isSurvivalMode() ? 'GAME OVER' : 'COMPLETE!';
@@ -1874,7 +1905,7 @@ function showFinal() {
 
   const finalScreen = document.getElementById('final-screen');
 
-  // 하드/이지 모드: 최고 점수 처리
+  // 쉬움/기본 난이도: 최고 점수 처리
   const existingBest = document.getElementById('final-best');
   if (existingBest) existingBest.remove();
 
@@ -2048,7 +2079,7 @@ function backToSetup() {
   document.getElementById('final-screen').style.display = 'none';
   document.getElementById('setup-screen').style.display = 'flex';
 
-  // 모드/하트 초기화
+  // 난이도/하트 초기화
   gameMode = 'ranking';
   hearts = 5;
   renderHearts();
@@ -2056,13 +2087,13 @@ function backToSetup() {
   // HUD hearts 숨김
   document.getElementById('hud-hearts-wrap').style.display = 'none';
 
-  // mode chip UI 리셋 (하드 모드 active)
+  // 난이도 chip UI 리셋 (기본 active)
   const modeGroup = document.getElementById('mode-chips');
   modeGroup.querySelectorAll('.chip').forEach(c => {
     c.classList.toggle('active', c.dataset.value === 'ranking');
   });
 
-  // 하드/이지 모드 기본값: domain/count chips 영역 숨김
+  // 쉬움/기본 난이도 기본값: domain/count chips 영역 숨김
   document.getElementById('domain-chips-wrap').style.display = 'none';
   document.getElementById('count-chips-wrap').style.display  = 'none';
   updateStatsButtonLabel();
