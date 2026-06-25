@@ -21,9 +21,9 @@ KDC(한국십진분류법) 분류번호를 단계적으로 선택하는 학습 �
 ## 주요 기능
 
 - **연습 모드** — 분야·문제 수 자유 선택, 오답 시 계속 시도 가능
-- **실전 모드** — 하트 5개, 틀리면 감소, 0이 되면 종료. 최고 점수 기록
-- **MY RECORD** — 게임 기록, 분야별 정답률, 최근 10게임 바 차트
-- **824권 도서 데이터** — 실제 인기 대출 도서 기반, 표지 이미지 포함
+- **이지 모드 / 하드 모드** — 하트 5개, 틀리면 감소, 0이 되면 종료. 모드별 최고 점수 기록
+- **MY RECORD** — 하드·이지 게임 기록, 분야별 정답률, 최근 10게임 바 차트
+- **704권 출제 도서 데이터** — 실제 인기 대출 도서 기반, 표지 이미지 포함
 - **Web Audio BGM** — 외부 파일 없이 Web Audio API로 구현한 오리지널 BGM
 
 ---
@@ -53,7 +53,7 @@ archive/KDC 추출.ipynb   # 주류 10개(000~900) BFS 탐색 → 14,023 노드 
     ↓
 kdc_all_data.json        # KDC 전체 트리 (코드·명칭·부모·자식 관계)
     ↓
-build.py                 # PARENT_MAP / NAME_MAP / CHILDREN_MAP → index.html 인라인 삽입
+archive/build.py         # PARENT_MAP / NAME_MAP / CHILDREN_MAP → index.html 인라인 삽입
 ```
 
 > KDC 트리는 초기 셋업 시 1회 수집 후 `index.html`에 직접 인라인되어 있습니다. 재실행 불필요.
@@ -63,30 +63,32 @@ build.py                 # PARENT_MAP / NAME_MAP / CHILDREN_MAP → index.html �
 ```
 도서관 정보나루 API
     ↓
-fetch_books.py       # KDC 분야별 인기 도서 수집 (824권)
+fetch_books.py       # KDC 분야별 인기 도서 수집 (원본 824권, 앱 출제 704권)
     ↓
 patch_images.py      # 표지 이미지 → base64 변환
     ↓
 patch_description.py # 책소개 · 키워드 수집
     ↓
-books_cache.json     # index.html이 fetch()로 로드
+books_cache.json     # index.html이 fetch()로 로드 후 출제 가능 도서 704권만 사용
 ```
 
-### 도서 수집 현황
+> 주류 코드(예: 100, 400)만 있는 도서는 분류 단계가 너무 단순하므로 제외하고, `class_no`가 현재 KDC 트리의 `PARENT_MAP`에 없는 도서는 정확성을 위해 출제에서 제외합니다.
+
+### 출제 도서 현황
 
 | 분야 | 권수 |
 |------|------|
 | 0xx 총류 | 36 |
-| 1xx 철학 | 118 |
-| 2xx 종교 | 78 |
-| 3xx 사회과학 | 128 |
-| 4xx 자연과학 | 68 |
-| 5xx 기술과학 | 87 |
-| 6xx 예술 | 98 |
-| 7xx 언어 | 77 |
-| 8xx 문학 | 92 |
-| 9xx 역사 | 42 |
-| **합계** | **824** |
+| 1xx 철학 | 101 |
+| 2xx 종교 | 74 |
+| 3xx 사회과학 | 107 |
+| 4xx 자연과학 | 61 |
+| 5xx 기술과학 | 76 |
+| 6xx 예술 | 87 |
+| 7xx 언어 | 62 |
+| 8xx 문학 | 89 |
+| 9xx 역사 | 11 |
+| **합계** | **704** |
 
 ---
 
@@ -121,11 +123,11 @@ MIT © 2026 Minhyuk Kwon
 
 ---
 
-## 개발자
+## 개발자 · 협업
 
 **Minhyuk Kwon** · [@kdc-min](https://github.com/kdc-min)
 
-> 이 프로젝트는 [Claude Sonnet 4.6](https://www.anthropic.com/claude) (Anthropic)과의 협업으로 개발되었습니다. 바이브 코딩(Vibe Coding)을 했다는 뜻입니다.
+> 이 프로젝트는 Claude Code(Anthropic) 및 OpenAI Codex를 활용해 기획, 구현, 디버그, 문서 정리를 함께 진행했습니다. 바이브 코딩(Vibe Coding)을 했다는 뜻입니다.
 
 ---
 
