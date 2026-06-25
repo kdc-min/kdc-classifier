@@ -576,6 +576,26 @@ body.shake { animation: shake 0.4s steps(4, end); }
   font-size: 0.8rem;
   color: var(--darkgray);
   display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  align-items: stretch;
+}
+
+.result-path-line {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.result-path-label {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--darkgray);
+}
+
+.result-path-row {
+  display: flex;
   flex-wrap: wrap;
   gap: 0.3rem;
   align-items: center;
@@ -587,6 +607,19 @@ body.shake { animation: shake 0.4s steps(4, end); }
   padding: 0.2rem 0.5rem;
   font-size: 0.75rem;
   font-weight: 700;
+}
+
+.result-path .path-arrow {
+  color: var(--darkgray);
+  line-height: 1.6;
+}
+
+.result-path-note {
+  border-top: 1px solid var(--black);
+  padding-top: 0.5rem;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--darkgray);
 }
 
 .result-delta {
@@ -1299,6 +1332,7 @@ let totalQuestions = 10;
 let selectedDomain = 'all';
 let currentStep = 0;
 let answerPath = [];
+let fullAnswerPath = [];
 let maxStreak = 0;
 let questionLog = [];
 let gameMode = 'ranking';  // 'practice' | 'ranking' | 'student'
@@ -1449,6 +1483,59 @@ function getKdcDisplayName(code) {
   return getKdcLabel(code) || code;
 }
 
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[ch]));
+}
+
+function formatKdcNode(code) {
+  const name = getKdcLabel(code);
+  return `${code}${name ? ' ' + name : ''}`;
+}
+
+function formatKdcPathText(path) {
+  return path.map(formatKdcNode).join(' > ');
+}
+
+function renderPathNodes(path, options = {}) {
+  const highlightBefore = options.highlightBefore ?? -1;
+  return path.map((c, i) => {
+    const style = i < highlightBefore ? ' style="font-weight:700;border-color:var(--red);color:var(--red)"' : '';
+    return `<span class="path-node"${style}>${escapeHtml(formatKdcNode(c))}</span>`;
+  }).join('<span class="path-arrow">▶</span>');
+}
+
+function renderResultPath(correct) {
+  const isStudent = gameMode === 'student';
+  const hasFullPath = fullAnswerPath.length > answerPath.length;
+  const label = isStudent ? '쉬움 정답(2단계)' : '정답 경로';
+  const highlightBefore = !correct ? currentStep : -1;
+
+  let html = `
+    <div class="result-path-line">
+      <div class="result-path-label">${label}</div>
+      <div class="result-path-row">${renderPathNodes(answerPath, { highlightBefore })}</div>
+    </div>
+  `;
+
+  if (isStudent && hasFullPath) {
+    html += `
+      <div class="result-path-line">
+        <div class="result-path-label">전체 분류기호</div>
+        <div class="result-path-row">${renderPathNodes(fullAnswerPath)}</div>
+      </div>
+      <div class="result-path-note">쉬움 난이도는 위 2단계까지만 채점합니다.</div>
+    `;
+  }
+
+  return html;
+}
+
 function shouldRenderKdcButton(code) {
   return hasKdcLabel(code) || usedKdcCodes.has(code);
 }
@@ -1531,6 +1618,8 @@ function logCurrentQuestion(correct) {
     book: questions[qIndex],
     correct,
     answerPath: [...answerPath],
+    fullAnswerPath: [...fullAnswerPath],
+    mode: gameMode,
   });
   currentQuestionLogged = true;
 }
@@ -1637,7 +1726,8 @@ function loadQuestion() {
 
   // Compute answer path
   const code = book.class_no;
-  answerPath = getPlayablePath(getAnswerPath(code));
+  fullAnswerPath = getAnswerPath(code);
+  answerPath = getPlayablePath(fullAnswerPath);
 
   // Update HUD
   document.getElementById('hud-q').textContent = qIndex + 1;
@@ -1819,12 +1909,7 @@ function showResult(correct, delta) {
 
   // Path nodes
   const pathEl = document.getElementById('result-path');
-  pathEl.innerHTML = answerPath.map((c, i) => {
-    const passed = !correct && i < currentStep;
-    const style = passed ? 'font-weight:700;border-color:var(--red);color:var(--red)' : '';
-    const name = getKdcLabel(c);
-    return `<span class="path-node" style="${style}">${c}${name ? ' ' + name : ''}</span>`;
-  }).join('<span style="color:var(--darkgray)"> ▶ </span>');
+  pathEl.innerHTML = renderResultPath(correct);
 
   document.getElementById('result-delta').textContent = `+${delta}점`;
 
@@ -2051,10 +2136,16 @@ function showFinal() {
 
   const logHtml = questionLog.map((q, i) => {
     const icon = q.correct ? '✅' : '❌';
-    const pathStr = q.answerPath.map(c => getKdcDisplayName(c)).join(' > ');
+    const answerPathStr = formatKdcPathText(q.answerPath);
+    const fullPath = q.fullAnswerPath || q.answerPath;
+    const fullPathStr = formatKdcPathText(fullPath);
+    const showFullPath = q.mode === 'student' && fullPath.length > q.answerPath.length;
+    const pathHtml = showFullPath
+      ? `쉬움 정답(2단계): ${escapeHtml(answerPathStr)}<br><span style="color:var(--darkgray)">전체 분류기호: ${escapeHtml(fullPathStr)}</span>`
+      : escapeHtml(answerPathStr);
     return `<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--black)">
       <div>${icon} ${i + 1}. ${q.book.title}</div>
-      <div style="font-size:0.75rem;color:var(--gold);margin-top:2px">[${q.book.class_no || ''}] ${pathStr}</div>
+      <div style="font-size:0.75rem;color:var(--gold);margin-top:2px">[${q.book.class_no || ''}] ${pathHtml}</div>
     </div>`;
   }).join('');
 
