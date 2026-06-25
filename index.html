@@ -810,6 +810,22 @@ body.shake { animation: shake 0.4s steps(4, end); }
   padding-bottom: 0.6rem;
 }
 
+#stats-title {
+  display: inline-block;
+  background: var(--white);
+  border: 3px solid var(--black);
+  box-shadow: 4px 4px 0 var(--black);
+  color: var(--black);
+  font-family: var(--sans);
+  font-size: clamp(1.15rem, 3.2vw, 1.65rem);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  padding: 0.65rem 1.2rem;
+  text-shadow: none;
+  word-break: keep-all;
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -865,9 +881,11 @@ body.shake { animation: shake 0.4s steps(4, end); }
   border: 3px solid var(--black);
   box-shadow: 3px 3px 0 var(--black);
   color: var(--black);
-  font-family: var(--pixel);
-  font-size: 0.55rem;
-  letter-spacing: 0.1em;
+  font-family: var(--sans);
+  font-size: 0.86rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
   padding: 0.8rem 2rem;
   cursor: pointer;
   width: 100%;
@@ -896,8 +914,7 @@ body.shake { animation: shake 0.4s steps(4, end); }
   box-shadow: 2px 2px 0 var(--red);
 }
 
-
-/* ===================== JUICE / NUDGE FX ===================== */
+/* ===================== JUICE FX ===================== */
 @keyframes btnIn { 0% { opacity:0; transform:translateY(10px); } 60% { opacity:1; transform:translateY(-2px); } 100% { opacity:1; transform:translateY(0); } }
 .kdc-btn.btn-in { animation: btnIn 0.24s ease-out both; }
 
@@ -934,13 +951,6 @@ body.shake { animation: shake 0.4s steps(4, end); }
 @keyframes nodePop { 0% { transform:scale(0.6); opacity:0; } 60% { transform:scale(1.12); } 100% { transform:scale(1); opacity:1; } }
 .path-bar span.node-pop { display:inline-block; animation: nodePop 0.28s ease-out; }
 
-@keyframes gridBreathe { 0%,100% { transform:scale(1); } 50% { transform:scale(1.012); } }
-#btn-grid.breathe { animation: gridBreathe 1.5s ease-in-out infinite; }
-
-#nudge-hint { position:fixed; left:50%; bottom:18px; transform:translate(-50%,16px); background:var(--black); color:var(--cream); border:2px solid var(--black); box-shadow:3px 3px 0 var(--gold); font-family:var(--pixel); font-size:0.55rem; letter-spacing:0.06em; padding:0.6rem 0.9rem; z-index:120; opacity:0; pointer-events:none; transition:opacity 0.3s ease, transform 0.3s ease; }
-#nudge-hint.show { opacity:1; transform:translate(-50%,0); animation: hintBob 1s ease-in-out infinite; }
-@keyframes hintBob { 0%,100% { margin-bottom:0; } 50% { margin-bottom:5px; } }
-
 /* GAME START 화살표 — 전진 넓지 */
 @keyframes arrowNudge { 0%,100% { transform:translateX(0); } 50% { transform:translateX(5px); } }
 .start-arrow { display:inline-block; animation: arrowNudge 1s ease-in-out infinite; }
@@ -950,7 +960,9 @@ body.shake { animation: shake 0.4s steps(4, end); }
 .title-mark { display:inline-block; font-size:0.88em; color:var(--red); position:relative; top:-0.14em; animation: markPulse 1.6s ease-in-out infinite; }
 @keyframes markPulse { 0%,100% { opacity:0.35; transform:scale(0.82); } 50% { opacity:1; transform:scale(1); } }
 
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; }
+}
 
 </style>
 </head>
@@ -2269,7 +2281,7 @@ function toggleMute() {
 </script>
 
 <script>
-/* ===================== JUICE / NUDGE ENGINE ===================== */
+/* ===================== JUICE FX ENGINE ===================== */
 (function () {
   function reflow(el){ if(el) void el.offsetWidth; }
   function animateOnce(el, cls){
@@ -2278,13 +2290,10 @@ function toggleMute() {
     el.addEventListener('animationend', function(){ el.classList.remove(cls); }, { once:true });
   }
 
-  // floating fx elements
   var flash = document.createElement('div'); flash.id = 'fx-flash'; document.body.appendChild(flash);
-  var hint = document.createElement('div'); hint.id = 'nudge-hint'; hint.textContent = '▲ 분류번호를 선택해 보세요'; document.body.appendChild(hint);
 
   function showFlash(){ flash.classList.remove('show'); reflow(flash); flash.classList.add('show'); }
 
-  // pixel particle burst at an element
   function burst(target){
     if(!target) return;
     var r = target.getBoundingClientRect();
@@ -2304,7 +2313,6 @@ function toggleMute() {
     }
   }
 
-  // HUD pops
   var lastScore = 0, lastStreak = 0, lastCorrect = 0;
   function syncHud(){
     var s = document.getElementById('hud-score');
@@ -2318,27 +2326,6 @@ function toggleMute() {
       if(v3>=3) st.classList.add('hot'); else st.classList.remove('hot');
       lastStreak = v3;
     }
-  }
-
-  // ── 넛지 idle timer ──
-  var idleTimer = null;
-  function clearNudge(){
-    if(idleTimer){ clearTimeout(idleTimer); idleTimer = null; }
-    var grid = document.getElementById('btn-grid');
-    if(grid) grid.classList.remove('breathe');
-    hint.classList.remove('show');
-  }
-  function armNudge(){
-    clearNudge();
-    idleTimer = setTimeout(function(){
-      var gs = document.getElementById('game-screen');
-      if(!gs || gs.offsetParent === null) return;
-      var ov = document.getElementById('result-overlay');
-      if(ov && ov.classList.contains('show')) return;
-      var grid = document.getElementById('btn-grid');
-      if(grid) grid.classList.add('breathe');
-      hint.classList.add('show');
-    }, 7000);
   }
 
   function wrap(name, after){
@@ -2363,7 +2350,6 @@ function toggleMute() {
         b.addEventListener('animationend', function(){ b.classList.remove('btn-in'); b.style.animationDelay=''; }, { once:true });
       });
     }
-    armNudge();
   });
 
   wrap('loadQuestion', function(){
@@ -2373,7 +2359,6 @@ function toggleMute() {
   });
 
   wrap('handleClick', function(code, btn){
-    clearNudge();
     if(btn && btn.classList.contains('correct')){ animateOnce(btn,'correct-pop'); burst(btn); }
     if(btn && btn.classList.contains('wrong')){ showFlash(); }
     syncHud();
@@ -2387,14 +2372,9 @@ function toggleMute() {
   });
 
   wrap('showResult', function(correct){
-    clearNudge();
     animateOnce(document.querySelector('.result-box'), 'overlay-pop');
     if(correct) animateOnce(document.getElementById('result-status'), 'status-wobble');
   });
-
-  wrap('nextQuestion', function(){ clearNudge(); });
-  wrap('backToSetup', function(){ clearNudge(); });
-  wrap('showFinal', function(){ clearNudge(); });
 })();
 </script>
 </body>
